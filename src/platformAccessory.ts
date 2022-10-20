@@ -1,105 +1,64 @@
-import { Service, PlatformAccessory, CharacteristicValue } from 'homebridge';
+import { Service, PlatformAccessory } from 'homebridge';
 
-import { ExampleHomebridgePlatform } from './platform';
+import { GarageDoorOpenerPlatform } from './platform';
+import fetch from 'node-fetch';
 
 /**
  * Platform Accessory
  * An instance of this class is created for each accessory your platform registers
  * Each accessory may expose multiple services of different service types.
  */
-export class ExamplePlatformAccessory {
+export class GarageDoorOpenerPlatformAccessory {
   private service: Service;
 
   /**
    * These are just used to create a working example
    * You should implement your own code to track the state of your accessory
    */
-  private exampleStates = {
-    On: false,
-    Brightness: 100,
+  private states = {
+    CurrentDoorState: this.platform.Characteristic.TargetDoorState.CLOSED,
+    TargetDoorState: this.platform.Characteristic.TargetDoorState.CLOSED,
+    ObstructionDetected: false,
   };
 
   constructor(
-    private readonly platform: ExampleHomebridgePlatform,
-    private readonly accessory: PlatformAccessory,
+      private readonly platform: GarageDoorOpenerPlatform,
+      private readonly accessory: PlatformAccessory,
   ) {
 
     // set accessory information
     this.accessory.getService(this.platform.Service.AccessoryInformation)!
-      .setCharacteristic(this.platform.Characteristic.Manufacturer, 'Default-Manufacturer')
-      .setCharacteristic(this.platform.Characteristic.Model, 'Default-Model')
-      .setCharacteristic(this.platform.Characteristic.SerialNumber, 'Default-Serial');
+      .setCharacteristic(this.platform.Characteristic.Manufacturer, 'Shelly')
+      .setCharacteristic(this.platform.Characteristic.Model, 'Shelly 1')
+      .setCharacteristic(this.platform.Characteristic.SerialNumber, accessory.context.device.uuid);
 
-    // get the LightBulb service if it exists, otherwise create a new LightBulb service
+    // get the GarageDoorOpener service if it exists, otherwise create a new GarageDoorOpener service
     // you can create multiple services for each accessory
-    this.service = this.accessory.getService(this.platform.Service.Lightbulb) || this.accessory.addService(this.platform.Service.Lightbulb);
+    this.service = this.accessory.getService(this.platform.Service.GarageDoorOpener)
+        || this.accessory.addService(this.platform.Service.GarageDoorOpener);
 
     // set the service name, this is what is displayed as the default name on the Home app
     // in this example we are using the name we stored in the `accessory.context` in the `discoverDevices` method.
-    this.service.setCharacteristic(this.platform.Characteristic.Name, accessory.context.device.exampleDisplayName);
+    this.service.setCharacteristic(this.platform.Characteristic.Name, accessory.context.device.displayName);
+
+    // set the service default value
+    this.service.setCharacteristic(this.platform.Characteristic.CurrentDoorState, this.platform.Characteristic.CurrentDoorState.CLOSED);
 
     // each service must implement at-minimum the "required characteristics" for the given service type
-    // see https://developers.homebridge.io/#/service/Lightbulb
+    // see https://developers.homebridge.io/#/service/GarageDoorOpener
 
-    // register handlers for the On/Off Characteristic
-    this.service.getCharacteristic(this.platform.Characteristic.On)
-      .onSet(this.setOn.bind(this))                // SET - bind to the `setOn` method below
-      .onGet(this.getOn.bind(this));               // GET - bind to the `getOn` method below
+    // register handlers for the CurrentDoorState Characteristic
+    this.service.getCharacteristic(this.platform.Characteristic.CurrentDoorState)
+      .onGet(this.handleCurrentDoorStateGet.bind(this)); // GET - bind to the `handleCurrentDoorStateGet` method below
 
-    // register handlers for the Brightness Characteristic
-    this.service.getCharacteristic(this.platform.Characteristic.Brightness)
-      .onSet(this.setBrightness.bind(this));       // SET - bind to the 'setBrightness` method below
+    // register handlers for the TargetDoorState Characteristic
+    this.service.getCharacteristic(this.platform.Characteristic.TargetDoorState)
+      .onGet(this.handleTargetDoorStateGet.bind(this)) // GET - bind to the `handleTargetDoorStateGet` method below
+      .onSet(this.handleTargetDoorStateSet.bind(this)); // SET - bind to the `handleTargetDoorStateSet` method below
 
-    /**
-     * Creating multiple services of the same type.
-     *
-     * To avoid "Cannot add a Service with the same UUID another Service without also defining a unique 'subtype' property." error,
-     * when creating multiple services of the same type, you need to use the following syntax to specify a name and subtype id:
-     * this.accessory.getService('NAME') || this.accessory.addService(this.platform.Service.Lightbulb, 'NAME', 'USER_DEFINED_SUBTYPE_ID');
-     *
-     * The USER_DEFINED_SUBTYPE must be unique to the platform accessory (if you platform exposes multiple accessories, each accessory
-     * can use the same sub type id.)
-     */
-
-    // Example: add two "motion sensor" services to the accessory
-    const motionSensorOneService = this.accessory.getService('Motion Sensor One Name') ||
-      this.accessory.addService(this.platform.Service.MotionSensor, 'Motion Sensor One Name', 'YourUniqueIdentifier-1');
-
-    const motionSensorTwoService = this.accessory.getService('Motion Sensor Two Name') ||
-      this.accessory.addService(this.platform.Service.MotionSensor, 'Motion Sensor Two Name', 'YourUniqueIdentifier-2');
-
-    /**
-     * Updating characteristics values asynchronously.
-     *
-     * Example showing how to update the state of a Characteristic asynchronously instead
-     * of using the `on('get')` handlers.
-     * Here we change update the motion sensor trigger states on and off every 10 seconds
-     * the `updateCharacteristic` method.
-     *
-     */
-    let motionDetected = false;
-    setInterval(() => {
-      // EXAMPLE - inverse the trigger
-      motionDetected = !motionDetected;
-
-      // push the new value to HomeKit
-      motionSensorOneService.updateCharacteristic(this.platform.Characteristic.MotionDetected, motionDetected);
-      motionSensorTwoService.updateCharacteristic(this.platform.Characteristic.MotionDetected, !motionDetected);
-
-      this.platform.log.debug('Triggering motionSensorOneService:', motionDetected);
-      this.platform.log.debug('Triggering motionSensorTwoService:', !motionDetected);
-    }, 10000);
-  }
-
-  /**
-   * Handle "SET" requests from HomeKit
-   * These are sent when the user changes the state of an accessory, for example, turning on a Light bulb.
-   */
-  async setOn(value: CharacteristicValue) {
-    // implement your own code to turn your device on/off
-    this.exampleStates.On = value as boolean;
-
-    this.platform.log.debug('Set Characteristic On ->', value);
+    // register handlers for the ObstructionDetected Characteristic
+    this.service.getCharacteristic(this.platform.Characteristic.ObstructionDetected)
+      .onGet(this.handleObstructionDetectedGet.bind(this)); // GET - bind to the `handleObstructionDetectedGet` method below
   }
 
   /**
@@ -115,27 +74,67 @@ export class ExamplePlatformAccessory {
    * @example
    * this.service.updateCharacteristic(this.platform.Characteristic.On, true)
    */
-  async getOn(): Promise<CharacteristicValue> {
-    // implement your own code to check if the device is on
-    const isOn = this.exampleStates.On;
+  handleCurrentDoorStateGet() {
+    this.platform.log.debug('Triggered GET CurrentDoorState');
+    const currentDoorState = this.states.CurrentDoorState;
 
-    this.platform.log.debug('Get Characteristic On ->', isOn);
+    // set this to a valid value for CurrentDoorState
+    return currentDoorState;
+  }
 
-    // if you need to return an error to show the device as "Not Responding" in the Home app:
-    // throw new this.platform.api.hap.HapStatusError(this.platform.api.hap.HAPStatus.SERVICE_COMMUNICATION_FAILURE);
+  handleTargetDoorStateGet() {
+    this.platform.log.debug('Triggered GET TargetDoorState');
+    const targetDoorState = this.states.TargetDoorState;
+    // set this to a valid value for TargetDoorState
+    return targetDoorState;
+  }
 
-    return isOn;
+  handleObstructionDetectedGet() {
+    this.platform.log.debug('Triggered GET ObstructionDetected');
+    const obstructionDeteced = this.states.ObstructionDetected;
+
+    return obstructionDeteced;
   }
 
   /**
    * Handle "SET" requests from HomeKit
    * These are sent when the user changes the state of an accessory, for example, changing the Brightness
    */
-  async setBrightness(value: CharacteristicValue) {
-    // implement your own code to set the brightness
-    this.exampleStates.Brightness = value as number;
+  async handleTargetDoorStateSet(value) {
+    this.platform.log.debug('Triggered SET TargetDoorState:', value);
 
-    this.platform.log.debug('Set Characteristic Brightness -> ', value);
+    if (value === this.platform.Characteristic.TargetDoorState.CLOSED) {
+      this.platform.log.debug('Closing Garage Door in %s seconds', this.platform.config.closeTime * 1000);
+      setTimeout(() => {
+        this.service.setCharacteristic(this.platform.Characteristic.CurrentDoorState, value);
+      }, this.platform.config.closeTime * 1000);
+    }
+
+    if (value === this.platform.Characteristic.TargetDoorState.OPEN) {
+      const shellyIp = this.platform.config.shellyIp;
+      if (shellyIp !== null) {
+        const response = await fetch(`http://${shellyIp}/relay/0?turn=on`, {
+          method: 'GET',
+          timeout: 3000,
+        });
+
+        if (!response.ok) {
+          this.platform.log.error(`Failed to call Shelly 1 at ${shellyIp}`);
+          throw new this.platform.api.hap.HapStatusError(this.platform.api.hap.HAPStatus.SERVICE_COMMUNICATION_FAILURE);
+        }
+      }
+
+      this.platform.log.debug('Opening Garage Door in %s seconds', this.platform.config.openTime * 1000);
+      setTimeout(() => {
+        this.service.setCharacteristic(this.platform.Characteristic.CurrentDoorState, value);
+      }, this.platform.config.openTime * 1000);
+
+      // Auto-close
+      this.platform.log.debug('Auto-closing Garage Door in %s seconds', this.platform.config.autoCloseTime * 1000);
+      setTimeout(() => {
+        this.service.setCharacteristic(this.platform.Characteristic.TargetDoorState, this.platform.Characteristic.TargetDoorState.CLOSED);
+      }, this.platform.config.autoCloseTime * 1000);
+    }
   }
 
 }

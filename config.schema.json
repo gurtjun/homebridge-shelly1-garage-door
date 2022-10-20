@@ -1,5 +1,5 @@
 {
-  "pluginAlias": "ExampleHomebridgePlugin",
+  "pluginAlias": "Shelly 1 Garage Door",
   "pluginType": "platform",
   "singular": true,
   "schema": {
@@ -9,7 +9,33 @@
         "title": "Name",
         "type": "string",
         "required": true,
-        "default": "Example Dynamic Platform"
+        "default": "Garage"
+      },
+      "shellyIp": {
+        "title": "Shelly 1 IP address",
+        "type": "string",
+        "required": true
+      },
+      "openTime": {
+        "title": "Opening Time",
+        "type": "integer",
+        "default": 15,
+        "maximum": 30,
+        "required": false
+      },
+      "closeTime": {
+        "title": "Closing Time",
+        "type": "integer",
+        "default": 15,
+        "maximum": 30,
+        "required": false
+      },
+      "autoCloseTime": {
+        "title": "Auto Closing Time",
+        "type": "integer",
+        "default": 30,
+        "maximum": 60,
+        "required": false
       }
     }
   }
