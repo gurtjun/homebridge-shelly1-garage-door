@@ -107,7 +107,7 @@ export class GarageDoorOpenerPlatformAccessory {
     if (value === this.platform.Characteristic.TargetDoorState.CLOSED) {
       this.platform.log.debug('Closing Garage Door in %s seconds', this.platform.config.closeTime * 1000);
       setTimeout(() => {
-        this.service.setCharacteristic(this.platform.Characteristic.CurrentDoorState, value);
+        this.service.updateCharacteristic(this.platform.Characteristic.CurrentDoorState, value);
       }, this.platform.config.closeTime * 1000);
     }
 
@@ -118,27 +118,32 @@ export class GarageDoorOpenerPlatformAccessory {
         if (shellyUsername !== null && shellyPassword !== null) {
           headers.set('Authorization', 'Basic ' + Buffer.from(shellyUsername + ':' + shellyPassword).toString('base64'));
         }
-        const response = await fetch(`http://${shellyIp}/relay/0?turn=on`, {
+
+        await fetch(`http://${shellyIp}/relay/0?turn=on`, {
           method: 'GET',
           headers,
           timeout: 3000,
+        }).then(response => {
+          if (!response.ok) {
+            throw new Error(`Failed to call shelly 1 at ${shellyIp}`);
+          }
+        }).catch(error => {
+          this.platform.log.error(error);
+          throw new this.platform.api.hap.HapStatusError(this.platform.api.hap.HAPStatus.SERVICE_COMMUNICATION_FAILURE);
         });
 
-        if (!response.ok) {
-          this.platform.log.error(`Failed to call Shelly 1 at ${shellyIp}`);
-          throw new this.platform.api.hap.HapStatusError(this.platform.api.hap.HAPStatus.SERVICE_COMMUNICATION_FAILURE);
-        }
       }
 
       this.platform.log.debug('Opening Garage Door in %s seconds', this.platform.config.openTime * 1000);
       setTimeout(() => {
-        this.service.setCharacteristic(this.platform.Characteristic.CurrentDoorState, value);
+        this.service.updateCharacteristic(this.platform.Characteristic.CurrentDoorState, value);
       }, this.platform.config.openTime * 1000);
 
       // Auto-close
       this.platform.log.debug('Auto-closing Garage Door in %s seconds', this.platform.config.autoCloseTime * 1000);
       setTimeout(() => {
-        this.service.setCharacteristic(this.platform.Characteristic.TargetDoorState, this.platform.Characteristic.TargetDoorState.CLOSED);
+        this.service.setCharacteristic(this.platform.Characteristic.TargetDoorState,
+          this.platform.Characteristic.TargetDoorState.CLOSED);
       }, this.platform.config.autoCloseTime * 1000);
     }
   }

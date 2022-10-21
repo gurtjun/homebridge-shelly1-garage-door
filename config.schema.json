@@ -14,6 +14,7 @@
       "shellyIp": {
         "title": "Shelly 1 IP address",
         "type": "string",
+        "format": "ipv4",
         "required": true
       },
       "shellyUsername": {
