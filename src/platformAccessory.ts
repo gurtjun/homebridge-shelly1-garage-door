@@ -2,6 +2,7 @@ import { Service, PlatformAccessory } from 'homebridge';
 
 import { GarageDoorOpenerPlatform } from './platform';
 import fetch from 'node-fetch';
+import {Headers} from 'node-fetch';
 
 /**
  * Platform Accessory
@@ -111,10 +112,15 @@ export class GarageDoorOpenerPlatformAccessory {
     }
 
     if (value === this.platform.Characteristic.TargetDoorState.OPEN) {
-      const shellyIp = this.platform.config.shellyIp;
+      const {shellyIp, shellyUsername, shellyPassword} = this.platform.config;
       if (shellyIp !== null) {
+        const headers = new Headers();
+        if (shellyUsername !== null && shellyPassword !== null) {
+          headers.set('Authorization', 'Basic ' + Buffer.from(shellyUsername + ':' + shellyPassword).toString('base64'));
+        }
         const response = await fetch(`http://${shellyIp}/relay/0?turn=on`, {
           method: 'GET',
+          headers,
           timeout: 3000,
         });
 

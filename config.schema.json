@@ -16,6 +16,16 @@
         "type": "string",
         "required": true
       },
+      "shellyUsername": {
+        "title": "Shelly 1 Username (if secured)",
+        "type": "string",
+        "required": false
+      },
+      "shellyPassword": {
+        "title": "Shelly 1 Password (if secured)",
+        "type": "string",
+        "required": false
+      },
       "openTime": {
         "title": "Opening Time",
         "type": "integer",

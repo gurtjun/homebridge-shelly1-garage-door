@@ -21,21 +21,25 @@ It will also automatically close after X amount of seconds defined in `autoClose
 
 ### Properties
 
-| Name            | Description                                       | Default   |
-|-----------------|---------------------------------------------------|-----------|
-| `name`          | Name of your garage door in Home app              | `Garage`  |
-| `shellyIp`      | IP address of your Shelly 1                       | N/A       |
-| `openTime`      | Time it takes to open garage                      | `15`      |
-| `closeTime`     | Time it takes to close garage                     | `15`      |
-| `autoCloseTime` | Amount of seconds before garage auto-closes again | `30`      |
+| Name             | Description                                       | Default   |
+|------------------|---------------------------------------------------|-----------|
+| `name`           | Name of your garage door in Home app              | `Garage`  |
+| `shellyIp`       | IP address of your Shelly 1                       | N/A       |
+| `shellyUsername` | Username of your Shelly 1 (if secured)            | N/A       |
+| `shellyPassword` | Password of your Shelly 1 (if secured)            | N/A       |
+| `openTime`       | Time it takes to open garage                      | `15`      |
+| `closeTime`      | Time it takes to close garage                     | `15`      |
+| `autoCloseTime`  | Amount of seconds before garage auto-closes again | `30`      |
 
 
 ### Example Configuration
 ```json
 {
-  "platform": "Garage Door Opener",
+  "platform": "Shelly 1 Garage Door",
   "name": "Garage",
   "shellyIp": "192.168.0.100",
+  "shellyUsername": "john",
+  "shellyPassword": "d0e",
   "openTime": 10,
   "closeTime": 10,
   "autoCloseTime": 30
