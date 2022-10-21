@@ -1,7 +1,7 @@
 {
   "displayName": "Shelly 1 Garage Door",
   "name": "homebridge-shelly1-garage-door",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Homebridge plugin to trigger Shelly 1 relay",
   "license": "Apache-2.0",
   "repository": {
